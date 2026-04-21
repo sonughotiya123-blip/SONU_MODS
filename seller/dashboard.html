@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonu Mods | Reseller Dashboard</title>
+
+    <script>
+        if (!sessionStorage.getItem('sonu_seller')) {
+            window.location.replace('index.html');
+        }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="../js/config.js"></script>
+
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #0a0b1e;
+            --card-bg: rgba(22, 27, 51, 0.8);
+            --text: #ffffff;
+            --warning: #ffaa00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 30px; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { font-weight: 800; color: var(--warning); text-transform: uppercase; text-shadow: 0 0 10px rgba(255,170,0,0.4); }
+        .logout-btn { background: rgba(255,51,102,0.1); border: 1px solid rgba(255,51,102,0.5); color: #ff3366; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .logout-btn:hover { background: #ff3366; color: white; }
+
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
+
+        .panel-box { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid rgba(255,170,0,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .panel-header { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: white; display: flex; justify-content: space-between; }
+        
+        .quota-display { text-align: center; margin-bottom: 20px; padding: 20px; background: rgba(255,170,0,0.1); border-radius: 10px; border: 1px solid rgba(255,170,0,0.3); }
+        .quota-display h2 { font-size: 48px; color: var(--warning); margin-bottom: 5px; }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
+        .input-control { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; outline: none; }
+        .input-control:focus { border-color: var(--warning); }
+        
+        .btn-action { width: 100%; padding: 14px; border: none; border-radius: 8px; background: linear-gradient(90deg, #ff6a00, var(--warning)); color: #000; font-weight: 800; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(255,170,0,0.4); }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .generated-keys-box { background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,255,255,0.2); padding: 15px; border-radius: 10px; margin-top: 20px; min-height: 100px; max-height: 250px; overflow-y: auto; font-family: monospace; color: var(--primary); }
+
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>Reseller Panel</h1>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- QUOTA & REQUEST PANEL -->
+        <div class="panel-box">
+            <div class="panel-header">My Profile</div>
+            <div style="font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 10px;">Logged in as: <strong id="sellerName" style="color:white">...</strong></div>
+            
+            <div class="quota-display">
+                <h2 id="quotaText">0</h2>
+                <div style="font-size: 12px; color: rgba(255,255,255,0.6); text-transform: uppercase;">Keys Quota Remaining</div>
+            </div>
+
+            <button class="btn-action" style="background: transparent; border: 1px solid var(--warning); color: var(--warning);" onclick="requestQuota()">Request More Quota</button>
+        </div>
+
+        <!-- GENERATOR PANEL -->
+        <div class="panel-box">
+            <div class="panel-header">Generate Keys</div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="input-group">
+                    <label>Select App</label>
+                    <select id="appSelect" class="input-control">
+                        <option value="">Loading apps...</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Duration</label>
+                    <select id="durationSelect" class="input-control">
+                        <option value="1h">1 Hour</option>
+                        <option value="6h">6 Hours</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Amount (Max depends on quota)</label>
+                <input type="number" id="amountInput" class="input-control" min="1" value="1">
+            </div>
+
+            <button class="btn-action" id="generateBtn" onclick="generateKeys()">Generate Keys</button>
+
+            <div class="generated-keys-box" id="resultBox">Generated keys will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        const sellerId = sessionStorage.getItem('sonu_seller');
+        let currentQuota = 0;
+
+        function logout() {
+            sessionStorage.removeItem('sonu_seller');
+            window.location.replace('index.html');
+        }
+
+        // Fetch Seller Data
+        db.ref(`sellers/${sellerId}`).on('value', snap => {
+            if(!snap.exists()) return logout();
+            const data = snap.val();
+            document.getElementById('sellerName').innerText = data.name || sellerId;
+            currentQuota = data.quota || 0;
+            document.getElementById('quotaText').innerText = currentQuota;
+        });
+
+        // Fetch Apps
+        db.ref('apps').once('value', snap => {
+            const select = document.getElementById('appSelect');
+            select.innerHTML = '<option value="">-- Select App --</option>';
+            snap.forEach(child => {
+                const app = child.val();
+                if(app.status === 'online') {
+                    select.innerHTML += `<option value="${app.prefix}">${app.name} (${app.prefix})</option>`;
+                }
+            });
+        });
+
+        function requestQuota() {
+            const reqAmount = prompt("How many keys quota do you need?");
+            if(!reqAmount || isNaN(reqAmount) || parseInt(reqAmount) <= 0) return;
+            
+            db.ref('quota_requests').push({
+                seller_id: sellerId,
+                amount: parseInt(reqAmount),
+                status: 'pending',
+                timestamp: Date.now()
+            }).then(() => {
+                alert("Request sent to Main Admin!");
+            });
+        }
+
+        function randomString(len) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let res = '';
+            for(let i=0; i<len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
+        }
+
+        async function generateKeys() {
+            const appPrefix = document.getElementById('appSelect').value;
+            const duration = document.getElementById('durationSelect').value;
+            let amount = parseInt(document.getElementById('amountInput').value);
+
+            if(!appPrefix) return alert("Please select an app.");
+            if(isNaN(amount) || amount <= 0) return alert("Invalid amount.");
+            if(amount > currentQuota) return alert(`You only have quota to generate ${currentQuota} keys.`);
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true; btn.innerText = "Generating...";
+
+            let durationHours = duration === '1h' ? 1 : 6;
+            let exp = new Date(Date.now() + (durationHours * 60 * 60 * 1000)).toISOString();
+            let lbl = durationHours + ' Hours';
+
+            const updates = {};
+            const generatedCodes = [];
+
+            for(let i=0; i<amount; i++) {
+                const code = `SONU-${appPrefix}-${randomString(4)}-${randomString(4)}`;
+                updates[`keys/${code}`] = {
+                    key_code: code, app: appPrefix, is_used: 0,
+                    expiry: exp, duration_label: lbl, device_id: 'NOT_SET', 
+                    created_at: Date.now(), generated_by: sellerId // Track seller
+                };
+                generatedCodes.push(code);
+            }
+
+            // Deduct Quota
+            updates[`sellers/${sellerId}/quota`] = currentQuota - amount;
+
+            try {
+                await db.ref().update(updates);
+                document.getElementById('resultBox').innerHTML = generatedCodes.join('<br>');
+                btn.disabled = false; btn.innerText = "Generate Keys";
+            } catch(e) {
+                alert("Error generating keys.");
+                btn.disabled = false; btn.innerText = "Generate Keys";
+            }
+        }
+    </script>
+</body>
+</html>

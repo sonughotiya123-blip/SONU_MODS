@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonu Mods | History Logs</title>
+
+    <script>
+        if (sessionStorage.getItem('sonu_admin') !== 'authenticated') {
+            window.location.replace('index.html');
+        }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="../js/config.js"></script>
+
+    <style>
+        :root {
+            --primary: #00f2ff; --secondary: #7000ff; --bg: #0a0b1e;
+            --card-bg: rgba(22, 27, 51, 0.8); --text: #ffffff;
+            --danger: #ff3366; --sidebar-width: 250px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); overflow-x: hidden; display: flex; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 4px; }
+
+        .sidebar { width: var(--sidebar-width); height: 100vh; background: var(--card-bg); border-right: 1px solid rgba(0, 242, 255, 0.15); position: fixed; top: 0; left: 0; padding: 20px 0; display: flex; flex-direction: column; z-index: 100; backdrop-filter: blur(20px); }
+        .logo { text-align: center; font-size: 26px; font-weight: 800; margin-bottom: 40px; background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-links { list-style: none; flex: 1; }
+        .nav-links a { display: flex; align-items: center; padding: 15px 25px; color: rgba(255,255,255,0.7); text-decoration: none; border-left: 3px solid transparent; }
+        .nav-links a.active { background: rgba(0, 242, 255, 0.1); color: var(--primary); border-left: 3px solid var(--primary); }
+        .nav-icon { width: 22px; height: 22px; margin-right: 15px; fill: currentColor; }
+
+        .main-content { margin-left: var(--sidebar-width); padding: 30px; width: calc(100% - var(--sidebar-width)); min-height: 100vh; }
+        .header h2 { font-weight: 800; font-size: 32px; margin-bottom: 30px;}
+
+        /* Tabs */
+        .tabs { display: flex; gap: 15px; margin-bottom: 20px; }
+        .tab-btn { padding: 12px 25px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
+
+        .tab-content { display: none; background: var(--card-bg); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .tab-content.active { display: block; }
+
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        th { color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; font-size: 12px; }
+        .code-text { font-family: monospace; color: var(--danger); font-size: 15px; font-weight: 800; }
+
+        .btn-restore { background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid #00ff88; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.3s; font-weight: 600;}
+        .btn-restore:hover { background: #00ff88; color: var(--bg); }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: 60px; top: auto; bottom: 0; flex-direction: row; padding: 0; }
+            .logo { display: none; }
+            .nav-links { display: flex; justify-content: space-around; width: 100%; }
+            .nav-links a { padding: 10px; flex-direction: column; font-size: 10px; border: none; }
+            .main-content { margin-left: 0; width: 100%; padding-bottom: 80px; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo">SONU MODS</div>
+        <ul class="nav-links">
+            <li><a href="dashboard.html"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> Dashboard</a></li>
+            <li><a href="users.html"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg> User IDs</a></li>
+            <li><a href="apps.html"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg> Apps</a></li>
+            <li><a href="keys.html"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 15h-2v-2h2v2zm0-4h-2V7h2v6zm5 4h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> Keys</a></li>
+            <li><a href="tokens.html"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg> Tokens</a></li>
+            <li><a href="history.html" class="active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg> History</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="header"><h2>History & Bin Logs</h2></header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('keys')">Deleted Keys</button>
+            <button class="tab-btn" onclick="switchTab('tokens')">Deleted Tokens</button>
+            <button class="tab-btn" onclick="switchTab('users')">Deleted Users</button>
+        </div>
+
+        <div class="tab-content active" id="tab-keys">
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Key Code</th><th>Target App</th><th>Deleted On</th><th>Action</th></tr></thead>
+                    <tbody id="histKeysBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-tokens">
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Token Code</th><th>Target App</th><th>Deleted On</th><th>Action</th></tr></thead>
+                    <tbody id="histTokensBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-users">
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>User ID</th><th>Name</th><th>Deleted On</th><th>Action</th></tr></thead>
+                    <tbody id="histUsersBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function formatDate(ms) {
+            return new Date(ms).toLocaleString('en-GB');
+        }
+
+        // Fetch Deleted Keys
+        db.ref('history_keys').on('value', snap => {
+            const body = document.getElementById('histKeysBody');
+            body.innerHTML = '';
+            if(!snap.exists()) return body.innerHTML = '<tr><td colspan="4">No deleted keys found.</td></tr>';
+            snap.forEach(child => {
+                const k = child.val();
+                body.innerHTML += `<tr>
+                    <td><span class="code-text">${k.key_code}</span></td>
+                    <td>${k.app}</td>
+                    <td>${formatDate(k.deleted_at || k.created_at)}</td>
+                    <td><button class="btn-restore" onclick="restore('history_keys', 'keys', '${k.key_code}')">Restore</button></td>
+                </tr>`;
+            });
+        });
+
+        // Fetch Deleted Tokens
+        db.ref('history_tokens').on('value', snap => {
+            const body = document.getElementById('histTokensBody');
+            body.innerHTML = '';
+            if(!snap.exists()) return body.innerHTML = '<tr><td colspan="4">No deleted tokens found.</td></tr>';
+            snap.forEach(child => {
+                const t = child.val();
+                body.innerHTML += `<tr>
+                    <td><span class="code-text">${t.token_code}</span></td>
+                    <td>${t.app}</td>
+                    <td>${formatDate(t.deleted_at || t.created_at)}</td>
+                    <td><button class="btn-restore" onclick="restore('history_tokens', 'shortner_tokens', '${t.token_code}')">Restore</button></td>
+                </tr>`;
+            });
+        });
+
+        // Fetch Deleted Users
+        db.ref('history_users').on('value', snap => {
+            const body = document.getElementById('histUsersBody');
+            body.innerHTML = '';
+            if(!snap.exists()) return body.innerHTML = '<tr><td colspan="4">No deleted users found.</td></tr>';
+            snap.forEach(child => {
+                const u = child.val();
+                body.innerHTML += `<tr>
+                    <td><span class="code-text">${u.user_id}</span></td>
+                    <td>${u.name}</td>
+                    <td>${formatDate(u.deleted_at || u.created_at)}</td>
+                    <td><button class="btn-restore" onclick="restore('history_users', 'users', '${u.user_id}')">Restore</button></td>
+                </tr>`;
+            });
+        });
+
+        function restore(sourceNode, targetNode, id) {
+            db.ref(`${sourceNode}/${id}`).once('value').then(snap => {
+                const data = snap.val();
+                db.ref(`${targetNode}/${id}`).set(data).then(() => {
+                    db.ref(`${sourceNode}/${id}`).remove();
+                });
+            });
+        }
+    </script>
+</body>
+</html>

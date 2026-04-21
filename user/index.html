@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonu Mods | User Gateway</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <!-- Include Global Config -->
+    <script src="../js/config.js"></script>
+
+    <style>
+        /* === CSS VARIABLES === */
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #0a0b1e;
+            --card-bg: rgba(22, 27, 51, 0.75);
+            --text: #ffffff;
+            --error: #ff3366;
+            --success: #00ff88;
+        }
+
+        /* === GLOBAL RESET & TYPOGRAPHY === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+            position: relative;
+        }
+
+        /* === ANIMATED PARTICLES BACKGROUND === */
+        #particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none; overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            bottom: -20px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: floatUp linear infinite;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { opacity: 0.6; }
+            80% { opacity: 0.4; }
+            100% { transform: translateY(-120vh) scale(1.5); opacity: 0; }
+        }
+
+        /* === MARQUEE NOTICE BAR === */
+        .marquee-bar {
+            width: 100%;
+            background: linear-gradient(90deg, rgba(112,0,255,0.2), rgba(0,242,255,0.2));
+            border-bottom: 1px solid rgba(0, 242, 255, 0.2);
+            padding: 8px 0;
+            position: relative;
+            z-index: 10;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .marquee-bar p {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 20s linear infinite;
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(0, 242, 255, 0.5);
+        }
+        @keyframes marquee {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+
+        /* === MAIN CONTENT CENTER === */
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* === LOGIN CARD === */
+        .login-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 
+                        0 0 30px rgba(112, 0, 255, 0.15) inset,
+                        0 0 15px rgba(0, 242, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            position: relative;
+            animation: cardEntrance 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes cardEntrance {
+            from { opacity: 0; transform: translateY(50px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .logo-title {
+            text-align: center;
+            font-size: 38px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            letter-spacing: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--primary));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            animation: shineText 3s linear infinite;
+            filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.3));
+        }
+
+        @keyframes shineText {
+            to { background-position: 200% center; }
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 30px;
+        }
+
+        /* === FORM STYLES === */
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .input-control {
+            width: 100%;
+            background-color: rgba(10, 11, 30, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--primary);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .input-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+            background-color: rgba(10, 11, 30, 0.8);
+        }
+        .input-control::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+            font-weight: 400;
+            letter-spacing: 1px;
+        }
+
+        /* === BUTTON STYLES === */
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            background-size: 200% auto;
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 5px 15px rgba(112, 0, 255, 0.3);
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+        .login-btn:hover {
+            background-position: right center;
+            box-shadow: 0 5px 25px rgba(0, 242, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        .login-btn:active {
+            transform: translateY(1px);
+        }
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* === MESSAGE BOX === */
+        .msg-box {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: none;
+        }
+        .msg-error {
+            background: rgba(255, 51, 102, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+        .msg-success {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        /* === FOOTER === */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            background: linear-gradient(0deg, rgba(10,11,30,1) 0%, transparent 100%);
+        }
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        .footer a:hover {
+            color: var(--text);
+            text-shadow: 0 0 10px var(--primary);
+        }
+        .back-home {
+            position: absolute;
+            top: 20px; left: 20px;
+            color: rgba(255,255,255,0.5);
+            text-decoration: none; font-size: 14px; z-index: 20; transition: 0.3s;
+        }
+        .back-home:hover { color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <a href="../index.html" class="back-home">&larr; Main Menu</a>
+
+    <div id="particles"></div>
+
+    <div class="marquee-bar">
+        <p>⚡ Welcome to Sonu Mods | Get your premium access keys here | Contact admin on Telegram for your User ID ⚡</p>
+    </div>
+
+    <div class="main-container">
+        <div class="login-card">
+            <h1 class="logo-title">SONU MODS</h1>
+            <p class="subtitle">User Gateway</p>
+
+            <form id="userLoginForm">
+                <div class="input-group">
+                    <label for="userId">Enter Your User ID</label>
+                    <input type="text" id="userId" class="input-control" placeholder="USR-XXXXXX" autocomplete="off" required>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn">Access Gateway</button>
+                
+                <div class="msg-box" id="msgBox"></div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="footer">
+        Powered by <strong>Sonu Mods System</strong><br>
+        Need help? Contact <a href="https://t.me/THE_SONU_MODS" target="_blank">@THE_SONU_MODS</a> on Telegram
+    </footer>
+
+    <script>
+        // --- FLOATING PARTICLES GENERATOR ---
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 35;
+
+            for (let i = 0; i < particleCount; i++) {
+                let particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                let size = Math.random() * 8 + 2; 
+                let posX = Math.random() * 100; 
+                let duration = Math.random() * 10 + 10; 
+                let delay = Math.random() * 10; 
+
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${posX}vw`;
+                particle.style.animationDuration = `${duration}s`;
+                particle.style.animationDelay = `${delay}s`;
+                
+                if(Math.random() > 0.5) {
+                    particle.style.background = 'radial-gradient(circle, var(--secondary) 0%, transparent 70%)';
+                }
+
+                particlesContainer.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        // --- LOGIN LOGIC & VALIDATION ---
+        const loginForm = document.getElementById('userLoginForm');
+        const userIdInput = document.getElementById('userId');
+        const loginBtn = document.getElementById('loginBtn');
+        const msgBox = document.getElementById('msgBox');
+
+        // Auto-uppercase input
+        userIdInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/\s/g, '');
+        });
+
+        function showMessage(msg, type) {
+            msgBox.style.display = 'block';
+            msgBox.className = `msg-box msg-${type}`;
+            msgBox.innerText = msg;
+            
+            setTimeout(() => { msgBox.style.opacity = '1'; }, 10);
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const userId = userIdInput.value.trim();
+
+            // Format Validation
+            const idPattern = /^USR-[A-Z0-9]+$/;
+            
+            if (!idPattern.test(userId)) {
+                showMessage("Invalid Format! Example: USR-123456", "error");
+                userIdInput.style.transform = "translateX(-5px)";
+                setTimeout(() => userIdInput.style.transform = "translateX(5px)", 100);
+                setTimeout(() => userIdInput.style.transform = "translateX(0)", 200);
+                return;
+            }
+
+            // UI State change
+            loginBtn.disabled = true;
+            loginBtn.innerText = "Verifying...";
+            msgBox.style.opacity = '0';
+
+            // Check Firebase
+            db.ref(`users/${userId}`).once('value')
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        
+                        if (userData.status === 'banned') {
+                            showMessage("Access Denied! Your ID is banned.", "error");
+                            loginBtn.disabled = false;
+                            loginBtn.innerText = "Access Gateway";
+                        } else if (userData.status === 'active') {
+                            // User is Active -> Success
+                            showMessage(`Welcome back, ${userData.name}! Redirecting...`, "success");
+                            
+                            // Save session
+                            sessionStorage.setItem('sonu_user', userData.user_id);
+                            
+                            // Redirect
+                            setTimeout(() => {
+                                window.location.href = 'redeem.html';
+                            }, 1000);
+                        } else {
+                            showMessage("Account issue. Contact Admin.", "error");
+                            loginBtn.disabled = false;
+                            loginBtn.innerText = "Access Gateway";
+                        }
+                    } else {
+                        showMessage("User ID not found!", "error");
+                        loginBtn.disabled = false;
+                        loginBtn.innerText = "Access Gateway";
+                    }
+                })
+                .catch((error) => {
+                    showMessage("Network Error! Try again.", "error");
+                    console.error(error);
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = "Access Gateway";
+                });
+        });
+
+        // --- AUTO REDIRECT IF ALREADY LOGGED IN ---
+        if (sessionStorage.getItem('sonu_user')) {
+            window.location.replace('redeem.html');
+        }
+
+        // --- MAINTENANCE CHECK ---
+        db.ref('settings/maintenance').on('value', snap => {
+            if(snap.val() === true) {
+                document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;color:white;font-size:24px;text-align:center;background:#0a0b1e;flex-direction:column;gap:15px;"><h1 style="color:var(--danger)">🚧 System Under Maintenance 🚧</h1><p style="color:rgba(255,255,255,0.6);font-size:16px;">We are currently upgrading the servers. Please check back later.</p></div>';
+            }
+        });
+    </script>
+</body>
+</html>

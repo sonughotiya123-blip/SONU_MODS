@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonu Mods | Redeem Access</title>
+
+    <script>
+        const activeUserId = sessionStorage.getItem('sonu_user');
+        if (!activeUserId) {
+            window.location.replace('index.html');
+        }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="../js/config.js"></script>
+
+    <style>
+        /* === CSS VARIABLES === */
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #0a0b1e;
+            --card-bg: rgba(22, 27, 51, 0.85);
+            --text: #ffffff;
+            --success: #00ff88;
+            --danger: #ff3366;
+            --warning: #ffaa00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% -20%, rgba(112, 0, 255, 0.15), transparent 60%);
+        }
+
+        /* --- HEADER --- */
+        .header {
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 11, 30, 0.6);
+            border-bottom: 1px solid rgba(0, 242, 255, 0.15);
+            backdrop-filter: blur(20px);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo { 
+            font-size: 26px; font-weight: 800; letter-spacing: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-badge { 
+            background: rgba(0, 242, 255, 0.1); color: var(--primary); 
+            padding: 8px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; 
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+        }
+        .btn-logout { 
+            background: rgba(255, 51, 102, 0.1); color: var(--danger); 
+            border: 1px solid var(--danger); padding: 8px 18px; border-radius: 20px; 
+            font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.3s; 
+        }
+        .btn-logout:hover { background: var(--danger); color: white; box-shadow: 0 0 15px var(--danger); }
+
+        /* --- MAIN CONTAINER --- */
+        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; flex: 1; width: 100%; position: relative; z-index: 10;}
+
+        /* --- STEPPER UI --- */
+        .stepper { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
+        .stepper::before { content: ''; position: absolute; top: 18px; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.1); z-index: 1; }
+        .step { position: relative; z-index: 2; text-align: center; width: 25%; }
+        .step-circle { 
+            width: 38px; height: 38px; background: var(--card-bg); 
+            border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; 
+            margin: 0 auto 10px; font-weight: 600; font-size: 15px; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            color: rgba(255,255,255,0.5); 
+        }
+        .step-label { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        
+        .step.active .step-circle { 
+            border-color: var(--primary); color: var(--primary); background: rgba(0, 242, 255, 0.1); 
+            box-shadow: 0 0 20px rgba(0,242,255,0.4); transform: scale(1.1);
+        }
+        .step.active .step-label { color: var(--primary); font-weight: 600; text-shadow: 0 0 10px rgba(0,242,255,0.3); }
+        .step.completed .step-circle { background: var(--primary); border-color: var(--primary); color: var(--bg); box-shadow: 0 0 15px var(--primary); }
+
+        /* --- STEP SECTIONS --- */
+        .step-section { 
+            display: none; background: var(--card-bg); padding: 40px; border-radius: 20px; 
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6); 
+            backdrop-filter: blur(15px); animation: fadeInSlideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        .step-section.active { display: block; }
+        @keyframes fadeInSlideUp { 
+            from { opacity: 0; transform: translateY(30px) scale(0.95); } 
+            to { opacity: 1; transform: translateY(0) scale(1); } 
+        }
+
+        .section-title { font-size: 26px; font-weight: 600; color: white; margin-bottom: 10px; text-align: center; }
+        .section-desc { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 30px; text-align: center; }
+
+        /* --- STEP 1: APPS GRID --- */
+        .apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; max-height: 45vh; overflow-y: auto; padding-right: 10px; }
+        .apps-grid::-webkit-scrollbar { width: 5px; }
+        .apps-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 5px; }
+        .app-card { 
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); 
+            padding: 20px 10px; border-radius: 12px; text-align: center; cursor: pointer; 
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .app-card::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(0,242,255,0.1) 0%, transparent 50%);
+            opacity: 0; transition: 0.3s;
+        }
+        .app-card:hover { 
+            border-color: var(--primary); transform: translateY(-5px); 
+            box-shadow: 0 10px 25px rgba(0,242,255,0.2); 
+        }
+        .app-card:hover::before { opacity: 1; }
+        
+        .app-name { font-size: 18px; font-weight: 600; margin-bottom: 15px; position: relative; z-index: 2; }
+        .app-badge { 
+            background: rgba(112,0,255,0.2); color: #d8b4fe; padding: 6px 12px; 
+            border-radius: 8px; font-size: 12px; border: 1px solid rgba(112,0,255,0.4); 
+            position: relative; z-index: 2; letter-spacing: 1px;
+        }
+
+        /* --- BUTTONS & INPUTS --- */
+        .btn-primary { 
+            width: 100%; padding: 18px; border: none; border-radius: 12px; 
+            background: linear-gradient(90deg, var(--secondary), var(--primary)); 
+            background-size: 200% auto; color: white; font-size: 16px; font-weight: 600; 
+            letter-spacing: 1px; cursor: pointer; transition: all 0.4s ease; 
+            text-transform: uppercase; box-shadow: 0 5px 20px rgba(112, 0, 255, 0.4); 
+        }
+        .btn-primary:hover { 
+            background-position: right center; transform: translateY(-2px); 
+            box-shadow: 0 8px 30px rgba(0, 242, 255, 0.5); 
+        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .btn-server {
+            background: rgba(0, 0, 0, 0.5); border: 2px solid; padding: 20px; border-radius: 15px;
+            color: white; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+        }
+        .btn-server.s1 { border-color: var(--primary); box-shadow: 0 0 15px rgba(0,242,255,0.2); }
+        .btn-server.s1:hover { background: rgba(0,242,255,0.2); box-shadow: 0 0 25px rgba(0,242,255,0.4); transform: scale(1.02); }
+        .btn-server.s2 { border-color: var(--secondary); box-shadow: 0 0 15px rgba(112,0,255,0.2); }
+        .btn-server.s2:hover { background: rgba(112,0,255,0.2); box-shadow: 0 0 25px rgba(112,0,255,0.4); transform: scale(1.02); }
+
+        .server-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+
+        .input-control { 
+            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.2); 
+            color: var(--primary); padding: 18px; border-radius: 12px; font-size: 18px; 
+            font-weight: 600; text-align: center; letter-spacing: 2px; outline: none; transition: 0.3s; margin-bottom: 20px; 
+        }
+        .input-control:focus { border-color: var(--primary); box-shadow: 0 0 20px rgba(0,242,255,0.3); background: rgba(0,0,0,0.6); }
+
+        /* --- SHORTENER UI --- */
+        .link-box { 
+            background: rgba(0,0,0,0.5); border: 1px dashed var(--primary); padding: 30px; 
+            border-radius: 15px; text-align: center; margin: 20px 0; display: none; 
+            animation: fadeInSlideUp 0.5s ease;
+        }
+        .timer-box { font-size: 32px; color: var(--warning); font-weight: 800; font-variant-numeric: tabular-nums; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,170,0,0.4); }
+        
+        /* --- STEP 4: FINAL KEY UI --- */
+        .key-display-box { 
+            background: rgba(0,0,0,0.6); border: 2px solid var(--primary); 
+            box-shadow: 0 0 40px rgba(0,242,255,0.3); padding: 40px 30px; border-radius: 20px; 
+            text-align: center; margin-bottom: 20px; position: relative; overflow: hidden; 
+        }
+        .key-display-box::before { 
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+            background: radial-gradient(circle, rgba(0,242,255,0.15) 0%, transparent 60%); pointer-events: none; 
+        }
+        .final-key { 
+            font-size: 32px; color: var(--primary); font-family: monospace; font-weight: 800; 
+            letter-spacing: 3px; margin-bottom: 15px; position: relative; z-index: 2; 
+            text-shadow: 0 0 15px rgba(0,242,255,0.5);
+        }
+        .key-meta { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 8px; position: relative; z-index: 2; }
+        .key-meta strong { color: white; font-weight: 600; }
+        .warning-text { color: var(--danger); font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 25px; }
+
+        /* --- MESSAGES --- */
+        .msg { padding: 15px; border-radius: 10px; text-align: center; font-size: 15px; font-weight: 600; margin-bottom: 25px; display: none; }
+        .msg-err { background: rgba(255,51,102,0.1); color: var(--error); border: 1px solid rgba(255,51,102,0.3); }
+
+        /* Confetti Canvas */
+        #confettiCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; display: none; }
+
+        /* Feedback Floating UI */
+        .feedback-btn-floating {
+            position: fixed; bottom: 30px; right: 30px; background: linear-gradient(90deg, var(--secondary), var(--primary));
+            color: white; border: none; padding: 15px 25px; border-radius: 30px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,242,255,0.4); z-index: 1000; display: flex; align-items: center; gap: 10px; transition: 0.3s;
+        }
+        .feedback-btn-floating:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,242,255,0.6); }
+        .feedback-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 1001; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .feedback-box { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--primary); }
+        
+        @media (max-width: 600px) {
+            .header { padding: 15px; flex-direction: column; gap: 15px; }
+            .server-grid { grid-template-columns: 1fr; }
+            .step-section { padding: 30px 20px; }
+            .final-key { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="feedback-btn-floating" onclick="document.getElementById('feedbackModal').style.display='flex'">
+        💬 Submit Feedback
+    </button>
+    <div class="feedback-modal" id="feedbackModal">
+        <div class="feedback-box">
+            <h3 style="margin-bottom:20px; color:white;">Submit Your Feedback</h3>
+            <div style="margin-bottom:15px;">
+                <input type="text" id="fbName" class="input-control" placeholder="Your Name" autocomplete="off" style="margin-bottom:10px;">
+                <textarea id="fbMessage" class="input-control" placeholder="Write your feedback or issue..." rows="4" style="resize:none;margin-bottom:10px;"></textarea>
+                <button class="btn-primary" onclick="submitFeedback()">Send to Admin</button>
+                <button class="btn-primary" style="margin-top:10px; background:transparent; border:1px solid rgba(255,255,255,0.2); box-shadow:none;" onclick="document.getElementById('feedbackModal').style.display='none'">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="confettiCanvas"></canvas>
+
+    <header class="header">
+        <div class="logo">SONU MODS</div>
+        <div class="user-info">
+            <div class="user-badge">User: <span id="displayUserId"></span></div>
+            <button class="btn-logout" onclick="logoutUser()">Logout Session</button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="stepper">
+            <div class="step active" id="st1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Select App</div>
+            </div>
+            <div class="step" id="st2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Get Token</div>
+            </div>
+            <div class="step" id="st3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Verify</div>
+            </div>
+            <div class="step" id="st4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Get Key</div>
+            </div>
+        </div>
+
+        <!-- STEP 1 -->
+        <div class="step-section active" id="step1">
+            <h2 class="section-title">Select Target Application</h2>
+            <p class="section-desc">Choose the premium app you want to generate a key for.</p>
+            
+            <input type="text" id="searchUserApp" class="input-control" placeholder="🔍 Search App Name or Prefix..." autocomplete="off" oninput="renderUserApps()" style="margin-bottom: 20px; padding: 12px; font-size: 15px;">
+
+            <div class="apps-grid" id="appsGrid">
+                <p style="text-align:center; grid-column:1/-1; color:rgba(255,255,255,0.5);">Connecting to secure server...</p>
+            </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="step-section" id="step2">
+            <h2 class="section-title">Generate Access Token</h2>
+            <p class="section-desc">App Selected: <strong id="selectedAppName" style="color:var(--primary); font-size: 16px;">...</strong></p>
+
+            <div id="serverSelection">
+                <p style="text-align: center; margin-bottom: 15px; color: rgba(255,255,255,0.7);">Select a server to complete the verification task and obtain your Token.</p>
+                <div class="server-grid">
+                    <button class="btn-server s1" onclick="generateShortenerLink(1)">
+                        <svg viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                        Server 1
+                    </button>
+                    <button class="btn-server s2" onclick="generateShortenerLink(2)">
+                        <svg viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                        Server 2
+                    </button>
+                </div>
+            </div>
+
+            <div class="link-box" id="linkBox">
+                <p style="font-size:16px; color:rgba(255,255,255,0.9); margin-bottom:15px;">Token generation initiated on <strong id="serverUsedName" color="var(--primary)">Server</strong>. <br>Complete the task to get your token.</p>
+                
+                <p style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:10px;">Awaiting Token Redemption (Expires in):</p>
+                <div class="timer-box" id="timerDisplay">30:00</div>
+                
+                <button class="btn-primary" id="btnNextToVerify" style="margin-top: 20px; background: rgba(0,242,255,0.15); border: 1px solid var(--primary); color: var(--primary); box-shadow: none;" onclick="goToStep(3)">I Have the Token</button>
+                <button class="btn-primary" style="margin-top: 15px; background: transparent; border: 1px solid rgba(255,255,255,0.2); box-shadow: none;" onclick="resetStep2()">Use Different Server</button>
+            </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="step-section" id="step3">
+            <h2 class="section-title">Verify Token</h2>
+            <p class="section-desc">Paste the Token you received after completing the server task.</p>
+
+            <div class="msg msg-err" id="verifyError"></div>
+
+            <input type="text" class="input-control" id="tokenInput" placeholder="TKN-APP-XXXXXXXX" autocomplete="off">
+            <button class="btn-primary" id="btnVerify" onclick="verifyTokenAndAssignKey()">Verify & Extract Key</button>
+            <button class="btn-primary" style="margin-top:20px; background:transparent; box-shadow:none; border:1px solid rgba(255,255,255,0.2);" onclick="goToStep(2)">Go Back</button>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="step-section" id="step4">
+            <h2 class="section-title" style="color:var(--success)">System Unlocked!</h2>
+            <p class="section-desc">Your exclusive Premium Access Key has been generated securely.</p>
+
+            <div class="key-display-box">
+                <div class="final-key" id="finalKeyText">SONU-XXXX-XXXXXX</div>
+                <div class="key-meta">Target Application: <strong id="finalApp">...</strong></div>
+                <div class="key-meta">Access Valid Until: <strong id="finalExpiry">...</strong></div>
+                
+                <button class="btn-primary" style="margin-top:25px;" onclick="copyFinalKey()">
+                    <svg viewBox="0 0 24 24" width="20" fill="white" style="vertical-align:middle; margin-right:8px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    Copy Access Key
+                </button>
+            </div>
+
+            <div class="warning-text">
+                <svg viewBox="0 0 24 24" width="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                WARNING: Save this key immediately. It will not be shown again.
+            </div>
+
+            <button class="btn-primary" style="margin-top:30px; background:rgba(255,255,255,0.1); box-shadow:none;" onclick="window.location.reload()">Start New Session</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- INIT & SECURITY ---
+        document.getElementById('displayUserId').innerText = activeUserId;
+
+        // --- MAINTENANCE & FEEDBACK ---
+        db.ref('settings/maintenance').on('value', snap => {
+            if(snap.val() === true) {
+                document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;color:white;font-size:24px;text-align:center;background:#0a0b1e;flex-direction:column;gap:15px;"><h1 style="color:var(--danger)">🚧 System Under Maintenance 🚧</h1><p style="color:rgba(255,255,255,0.6);font-size:16px;">We are currently upgrading the servers. Please check back later.</p></div>';
+            }
+        });
+
+        function submitFeedback() {
+            const name = document.getElementById('fbName').value.trim();
+            const msg = document.getElementById('fbMessage').value.trim();
+            if(!name || !msg) return alert("Please fill all fields!");
+            
+            db.ref('feedbacks').push({
+                user_id: activeUserId || 'Unknown',
+                name: name,
+                message: msg,
+                created_at: Date.now()
+            }).then(() => {
+                alert("Feedback sent successfully! Thank you.");
+                document.getElementById('feedbackModal').style.display='none';
+                document.getElementById('fbMessage').value = '';
+            });
+        }
+
+        function logoutUser() {
+            sessionStorage.removeItem('sonu_user');
+            window.location.replace('index.html');
+        }
+
+        // --- DEVICE FINGERPRINT HASHING ---
+        function getDeviceFingerprint() {
+            const dataStr = navigator.userAgent + screen.width + screen.height + navigator.language;
+            let hash = 0;
+            for (let i = 0; i < dataStr.length; i++) {
+                let char = dataStr.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; 
+            }
+            return "DEV-" + Math.abs(hash).toString(16).toUpperCase();
+        }
+        const DEVICE_ID = getDeviceFingerprint();
+
+        // --- GLOBAL STATE ---
+        let selectedApp = null; // { prefix: 'FF', name: 'Free Fire' }
+        let generatedTokenCode = null;
+        let timerInterval = null;
+        
+        // Shortener configuration fetched from Firebase
+        let shortenerSettings = {
+            server1: "",
+            server2: ""
+        };
+
+        // --- FETCH SHORTENER SETTINGS ---
+        db.ref('settings/shorteners').on('value', (snap) => {
+            if(snap.exists()) {
+                const data = snap.val();
+                if(data.server1) shortenerSettings.server1 = data.server1;
+                if(data.server2) shortenerSettings.server2 = data.server2;
+            }
+        });
+
+        // --- STEPPER UI LOGIC ---
+        function goToStep(stepNum) {
+            document.querySelectorAll('.step-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step${stepNum}`).classList.add('active');
+            
+            for(let i=1; i<=4; i++) {
+                const st = document.getElementById(`st${i}`);
+                if(i < stepNum) {
+                    st.className = 'step completed';
+                } else if (i === stepNum) {
+                    st.className = 'step active';
+                } else {
+                    st.className = 'step';
+                }
+            }
+        }
+
+        function resetStep2() {
+            clearInterval(timerInterval);
+            document.getElementById('linkBox').style.display = 'none';
+            document.getElementById('serverSelection').style.display = 'block';
+        }
+
+        // --- STEP 1: LOAD APPS ---
+        let allUserApps = [];
+        db.ref('apps').orderByChild('status').equalTo('active').on('value', snapshot => {
+            allUserApps = [];
+            if(snapshot.exists()) {
+                snapshot.forEach(child => { allUserApps.push(child.val()); });
+            }
+            renderUserApps();
+        });
+
+        function renderUserApps() {
+            const appsGrid = document.getElementById('appsGrid');
+            const searchQ = document.getElementById('searchUserApp').value.toLowerCase();
+            appsGrid.innerHTML = '';
+            
+            const filtered = allUserApps.filter(app => app.name.toLowerCase().includes(searchQ) || app.prefix.toLowerCase().includes(searchQ));
+
+            if(filtered.length === 0) {
+                appsGrid.innerHTML = '<p style="color:var(--danger); grid-column:1/-1; text-align:center; font-weight:600;">No Apps Found.</p>';
+                return;
+            }
+
+            filtered.forEach(app => {
+                const card = document.createElement('div');
+                card.className = 'app-card';
+                card.innerHTML = `
+                    <img src="${app.icon || 'https://via.placeholder.com/60x60/161b33/00f2ff?text=' + app.prefix}" style="width:60px;height:60px;border-radius:12px;margin-bottom:10px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">
+                    <div class="app-name">${app.name}</div>
+                    <span class="app-badge">${app.prefix} SYSTEM</span>
+                `;
+                card.onclick = () => selectApp(app.prefix, app.name);
+                appsGrid.appendChild(card);
+            });
+        }
+
+        function selectApp(prefix, name) {
+            selectedApp = { prefix, name };
+            document.getElementById('selectedAppName').innerText = `${name} [${prefix}]`;
+            goToStep(2);
+        }
+
+        // --- STEP 2: GENERATE TOKEN & REDIRECT TO SHORTENER ---
+        function generateRandomString(len=8) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let res = '';
+            for(let i=0; i<len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
+        }
+
+        function generateShortenerLink(serverNum) {
+            // Validate if server url is set
+            const shortUrlBase = serverNum === 1 ? shortenerSettings.server1 : shortenerSettings.server2;
+            if(!shortUrlBase) {
+                alert(`Server ${serverNum} is currently offline or not configured by Admin.`);
+                return;
+            }
+
+            generatedTokenCode = `TKN-${selectedApp.prefix}-${generateRandomString()}`;
+            const expiryTime = Date.now() + (30 * 60 * 1000); // 30 mins
+
+            const tokenData = {
+                token_code: generatedTokenCode,
+                app: selectedApp.prefix,
+                key_duration: "7d", // Default reward
+                token_expiry: new Date(expiryTime).toISOString(),
+                redeemed: 0,
+                redeemed_at: null,
+                device_id: "NOT_SET",
+                created_at: Date.now()
+            };
+
+            db.ref(`shortner_tokens/${generatedTokenCode}`).set(tokenData).then(() => {
+                // Hide selection, show timer
+                document.getElementById('serverSelection').style.display = 'none';
+                document.getElementById('linkBox').style.display = 'block';
+                document.getElementById('serverUsedName').innerText = `Server ${serverNum}`;
+                
+                startTimer(30 * 60);
+
+                // Construct full URL (e.g. https://gplinks.com/api?api=XYZ&url=YOUR_DOMAIN?token=TKN...)
+                // Since we don't have a backend to construct the API call securely, we assume the admin 
+                // sets a simple redirect or just gives the user the base link.
+                // Normally admin puts: https://gplinks.com/.../?url= 
+                // We will append the token to the end or just open the link if they use a general link.
+                
+                // Let's assume the admin link is a direct link they want users to go to.
+                // We will open it in a new tab.
+                window.open(shortUrlBase, '_blank');
+
+            }).catch(err => {
+                alert("Error connecting to database. Try again.");
+            });
+        }
+
+        function startTimer(duration) {
+            let timer = duration;
+            const display = document.getElementById('timerDisplay');
+            const btnVerify = document.getElementById('btnNextToVerify');
+            
+            display.style.color = "var(--warning)";
+            btnVerify.style.display = 'inline-block';
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(function () {
+                let minutes = parseInt(timer / 60, 10);
+                let seconds = parseInt(timer % 60, 10);
+
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                display.textContent = minutes + ":" + seconds;
+
+                if (--timer < 0) {
+                    clearInterval(timerInterval);
+                    display.textContent = "EXPIRED";
+                    display.style.color = "var(--danger)";
+                    btnVerify.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        // --- STEP 3: VERIFY TOKEN & GET KEY ---
+        function showVerifyError(msg) {
+            const errBox = document.getElementById('verifyError');
+            errBox.innerText = msg;
+            errBox.style.display = 'block';
+            setTimeout(() => { errBox.style.display = 'none'; }, 4000);
+        }
+
+        function verifyTokenAndAssignKey() {
+            const inputToken = document.getElementById('tokenInput').value.trim().toUpperCase();
+            const btn = document.getElementById('btnVerify');
+            
+            if(!inputToken) return showVerifyError("Please enter the Token Code!");
+            
+            btn.disabled = true;
+            btn.innerText = "Extracting Key...";
+
+            db.ref(`shortner_tokens/${inputToken}`).once('value').then(tokenSnap => {
+                if(!tokenSnap.exists()) {
+                    btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                    return showVerifyError("Invalid Token! Does not exist in system.");
+                }
+
+                const tokenData = tokenSnap.val();
+
+                if(tokenData.redeemed === 1) {
+                    btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                    return showVerifyError("Token Already Used! Get a new one.");
+                }
+                if(new Date(tokenData.token_expiry) < new Date()) {
+                    btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                    return showVerifyError("Token Expired! You took too long.");
+                }
+                if(tokenData.app !== selectedApp.prefix) {
+                    btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                    return showVerifyError(`Wrong Target App! This token is for ${tokenData.app}.`);
+                }
+
+                db.ref('keys').orderByChild('app').equalTo(selectedApp.prefix).once('value').then(keySnap => {
+                    if(!keySnap.exists()) {
+                        btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                        return showVerifyError("Server is out of keys. Contact Admin.");
+                    }
+
+                    let availableKey = null;
+                    const now = new Date();
+
+                    keySnap.forEach(child => {
+                        const k = child.val();
+                        if(k.is_used === 0) {
+                            if(k.expiry === 'LIFETIME' || new Date(k.expiry) > now) {
+                                availableKey = k;
+                                return true; 
+                            }
+                        }
+                    });
+
+                    if(!availableKey) {
+                        btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                        return showVerifyError("All keys are currently used. Contact Admin.");
+                    }
+
+                    const updates = {};
+                    const timestamp = Date.now();
+
+                    updates[`keys/${availableKey.key_code}/is_used`] = 1;
+                    updates[`keys/${availableKey.key_code}/device_id`] = DEVICE_ID;
+                    
+                    updates[`shortner_tokens/${inputToken}/redeemed`] = 1;
+                    updates[`shortner_tokens/${inputToken}/redeemed_at`] = timestamp;
+                    updates[`shortner_tokens/${inputToken}/device_id`] = DEVICE_ID;
+
+                    updates[`users/${activeUserId}/device_id`] = DEVICE_ID;
+                    updates[`users/${activeUserId}/last_key`] = availableKey.key_code;
+                    updates[`users/${activeUserId}/last_redeemed`] = timestamp;
+
+                    db.ref().update(updates).then(() => {
+                        document.getElementById('finalKeyText').innerText = availableKey.key_code;
+                        document.getElementById('finalApp').innerText = selectedApp.name;
+                        
+                        const expText = availableKey.expiry === 'LIFETIME' ? 'Lifetime Access' : new Date(availableKey.expiry).toLocaleString('en-GB');
+                        document.getElementById('finalExpiry').innerText = expText;
+
+                        goToStep(4);
+                        fireConfetti();
+                        
+                    }).catch(err => {
+                        btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                        showVerifyError("Database synchronization failed.");
+                    });
+                });
+            }).catch(err => {
+                btn.disabled = false; btn.innerText = "Verify & Extract Key";
+                showVerifyError("Network connection lost. Try again.");
+            });
+        }
+
+        function copyFinalKey() {
+            const keyText = document.getElementById('finalKeyText').innerText;
+            navigator.clipboard.writeText(keyText).then(() => {
+                alert("Premium Key Copied to Clipboard!");
+            });
+        }
+
+        // --- HIGH QUALITY CONFETTI ---
+        function fireConfetti() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const pieces = [];
+            const colors = ['#00f2ff', '#7000ff', '#ffffff', '#ff3366', '#00ff88'];
+
+            for(let i=0; i<150; i++) {
+                pieces.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2 + 100,
+                    vx: (Math.random() - 0.5) * 30,
+                    vy: (Math.random() - 1) * 30 - 5,
+                    size: Math.random() * 10 + 5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rot: Math.random() * 360,
+                    rotSpeed: (Math.random() - 0.5) * 20
+                });
+            }
+
+            function render() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let active = false;
+                
+                pieces.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.8; // gravity
+                    p.rot += p.rotSpeed;
+
+                    if(p.y < canvas.height) active = true;
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot * Math.PI / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = p.color;
+                    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                    ctx.restore();
+                });
+
+                if(active) {
+                    requestAnimationFrame(render);
+                } else {
+                    canvas.style.display = 'none';
+                }
+            }
+            render();
+        }
+    </script>
+</body>
+</html>
